@@ -1196,7 +1196,6 @@
                         if (totalStock <= this.config.urgentThreshold) status = 'red';
                         else if (minDays <= this.config.warningDays) status = 'yellow';
                         
-                        const sanitizedName = reagent.name.replace(/[^a-zA-Z0-9]/g, '');
                         const row = `
                             <tr class="reagent-row">
                                 <td><span class="reagent-name" onclick="App.toggleBatchDetails(event, '${reagent.id}')"><i class="fas fa-plus-square"></i> ${reagent.name}</span></td>
@@ -1247,7 +1246,7 @@
             
             renderBatchDetails(reagentId) {
                 const container = document.getElementById(`batch-list-${reagentId}`);
-                const reagent = this.cache.reagents.find(r => r.id === reagentId);
+                const reagent = this.cache.reagents.find(r => r.id === parseInt(reagentId));
                 if (!reagent) return;
 
                 if (reagent.reagent_batches.length === 0) {
@@ -1299,7 +1298,7 @@
 
             prepareBatchIn(reagentId, batchNo) {
                 this.prepareNewReagentIn(); 
-                const reagent = this.cache.reagents.find(r => r.id === reagentId);
+                const reagent = this.cache.reagents.find(r => r.id === parseInt(reagentId));
                 const batch = reagent.reagent_batches.find(b => b.batch_no === batchNo);
                 document.getElementById('reagentInModalTitle').innerText = '为现有批次添加入库';
                 document.getElementById('reagentName').value = reagent.name;
@@ -1318,7 +1317,7 @@
             prepareBatchOut(reagentId, reagentName, batchNo) {
                 const form = document.getElementById('reagentOutForm');
                 form.reset();
-                const reagent = this.cache.reagents.find(r => r.id === reagentId);
+                const reagent = this.cache.reagents.find(r => r.id === parseInt(reagentId));
                 const batch = reagent.reagent_batches.find(b => b.batch_no === batchNo);
                 if (!reagent || !batch) return;
 
