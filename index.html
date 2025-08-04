@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验室库存管理系统</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --font-color: #333;
+            --border-color: #dcdfe6;
+            --success-color: #67c23a;
+            --warning-color: #e6a23c;
+            --danger-color: #f56c6c;
+            --info-color: #909399;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            background-color: var(--secondary-color);
+            color: var(--font-color);
+            display: flex;
+            height: 100vh;
+        }
+
+        /* --- Layout --- */
+        .sidebar {
+            width: 220px;
+            background-color: #304156;
+            color: #bfcbd9;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #4a5a70;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu li {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-menu li:hover, .sidebar-menu li.active {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .sidebar-menu li i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 25px;
+            overflow-y: auto;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .page-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        /* --- Common Components --- */
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.3s;
+            color: #fff;
+        }
+        
+        .btn:hover {
+            opacity: 0.85;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-success { background-color: var(--success-color); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-secondary { background-color: var(--info-color); }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        thead th {
+            background-color: #f5f7fa;
+            font-weight: 600;
+        }
+        
+        tbody .category-header th {
+            background-color: #eef1f6;
+            font-weight: bold;
+            color: #304156;
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        tbody tr.reagent-row:hover, tbody tr.equipment-row:hover {
+            background-color: #ecf5ff;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-green { background-color: var(--success-color); }
+        .status-yellow { background-color: var(--warning-color); }
+        .status-red { background-color: var(--danger-color); }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 8% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 60%;
+            max-width: 800px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-50px); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-btn:hover, .close-btn:focus {
+            color: black;
+        }
+
+        .modal-body {
+            padding: 20px 0;
+        }
+
+        .modal-footer {
+            padding: 15px 0 0;
+            text-align: right;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .modal-footer .btn {
+            margin-left: 10px;
+        }
+
+        /* --- Page Specific Styles --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .dashboard-entry-btn {
+            padding: 30px;
+            font-size: 20px;
+            text-align: center;
+        }
+        
+        .reagent-name {
+            cursor: pointer;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .reagent-name:hover {
+            text-decoration: underline;
+        }
+
+        .batch-details-row {
+            display: none;
+            background-color: #fbfdff;
+        }
+        
+        .batch-card {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+        }
+
+        .batch-info span {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .batch-info .batch-number {
+            font-weight: bold;
+        }
+        .batch-info .expiry-date {
+            color: var(--danger-color);
+        }
+        
+        .form-steps {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            counter-reset: step;
+        }
+        .form-steps .step {
+            position: relative;
+            text-align: center;
+        }
+        .form-steps .step::before {
+            counter-increment: step;
+            content: counter(step);
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+            color: #fff;
+            display: block;
+            margin: 0 auto 10px auto;
+        }
+        .form-steps .step.active::before {
+            background-color: var(--primary-color);
+        }
+        
+        .form-step-content {
+            display: none;
+        }
+        .form-step-content.active {
+            display: block;
+        }
+
+        input:read-only {
+            background-color: #f5f7fa;
+            cursor: not-allowed;
+        }
+        
+        .maintenance-log-entry {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .maintenance-log-entry:last-child {
+            border-bottom: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-flask-vial"></i> 实验室库存
+        </div>
+        <ul class="sidebar-menu">
+            <li class="active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>总控面板</span></li>
+            <li data-page="reagents"><i class="fas fa-vials"></i><span>试剂物料</span></li>
+            <li data-page="equipment"><i class="fas fa-microscope"></i><span>仪器设备</span></li>
+            <li data-page="records"><i class="fas fa-history"></i><span>操作记录</span></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div id="dashboard" class="page active">
+            <h2 class="page-header">总控面板 (Dashboard)</h2>
+            <div class="dashboard-grid">
+                <button class="btn btn-primary dashboard-entry-btn" onclick="App.prepareNewReagentIn()"><i class="fas fa-plus-circle"></i> 试剂物料入库</button>
+                <button class="btn btn-success dashboard-entry-btn" onclick="showModal('equipmentInModal')"><i class="fas fa-plus-circle"></i> 仪器设备入库</button>
+            </div>
+
+            <div class="card">
+                <h3>库存预警看板</h3>
+                <div style="display: flex; align-items: center; gap: 30px;">
+                    <div style="width: 200px; height: 200px;">
+                        <canvas id="reagentStockChart"></canvas>
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <h4>临近过期批次 (30天内)</h4>
+                         <table id="expiringSoonTable">
+                            <thead>
+                                <tr>
+                                    <th>试剂名称</th>
+                                    <th>批号</th>
+                                    <th>剩余天数</th>
+                                 </tr>
+                            </thead>
+                            <tbody>
+                             </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                 <h3>最近操作记录</h3>
+                <table id="recentRecordsTable">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                             <th>类型</th>
+                            <th>物料名称</th>
+                            <th>操作人</th>
+                             <th>详情</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                         </tbody>
+                 </table>
+            </div>
+        </div>
+
+        <div id="reagents" class="page">
+            <h2 class="page-header">试剂物料总库存</h2>
+            <div class="card">
+                <table id="reagentInventoryTable">
+                     <thead>
+                        <tr>
+                            <th>试剂名称</th>
+                            <th>总盒数</th>
+                            <th>总库存(人份)</th>
+                            <th>预警状态</th>
+                        </tr>
+                     </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+       <div id="equipment" class="page">
+            <h2 class="page-header">仪器设备管理</h2>
+            <div class="card">
+                <table id="equipmentTable">
+                    <thead>
+                        <tr>
+                             <th>设备名称</th>
+                            <th>制造商</th>
+                            <th>规格型号</th>
+                            <th>出厂编号</th>
+                            <th>数量</th>
+                             <th>存放位置</th>
+                            <th>状态</th>
+                            <th>负责人</th>
+                            <th>操作</th>
+                        </tr>
+                     </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="records" class="page">
+             <h2 class="page-header">记录查询系统</h2>
+            <div class="card">
+                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <input type="date" id="filterStartDate" class="form-group">
+                    <input type="date" id="filterEndDate" class="form-group">
+                    <select id="filterOperationType" class="form-group">
+                        <option value="">所有操作类型</option>
+                        <option value="入库">入库</option>
+                        <option value="出库">出库</option>
+                        <option value="设备登记">设备登记</option>
+                        <option value="设备编辑">设备编辑</option>
+                        <option value="设备维护">设备维护</option>
+                        <option value="调整">调整</option>
+                    </select>
+                    <input type="text" id="filterItemName" placeholder="物料名称" class="form-group">
+                    <input type="text" id="filterOperator" placeholder="操作人" class="form-group">
+                    <input type="text" id="filterBatchOrSerial" placeholder="批号/设备编号" class="form-group">
+                     <button class="btn btn-primary" onclick="App.renderRecordsPage()">查询</button>
+                    <button class="btn btn-secondary" onclick="App.printRecords()">打印报表</button>
+                </div>
+                <table id="fullRecordsTable">
+                    <thead>
+                         <tr>
+                            <th>时间</th>
+                            <th>操作类型</th>
+                            <th>物料类型</th>
+                             <th>物料名称</th>
+                            <th>批号/编号</th>
+                            <th>数量</th>
+                             <th>操作人</th>
+                            <th>备注/用途</th>
+                        </tr>
+                    </thead>
+                     <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Reagent In Modal -->
+    <div id="reagentInModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                 <span class="modal-title" id="reagentInModalTitle">试剂物料入库</span>
+                <span class="close-btn" onclick="closeModal('reagentInModal')">&times;</span>
+            </div>
+            <form id="reagentInForm">
+                <div class="modal-body">
+                    <div class="form-steps">
+                         <div class="step active" id="reagentStep1Indicator">基础信息</div>
+                        <div class="step" id="reagentStep2Indicator">批次信息</div>
+                        <div class="step" id="reagentStep3Indicator">管理信息</div>
+                    </div>
+                     <div class="form-step-content active" id="reagentStep1">
+                        <div class="form-group">
+                            <label for="reagentName">试剂名称</label>
+                            <input type="text" id="reagentName" required list="reagentNameDatalist">
+                            <datalist id="reagentNameDatalist"></datalist>
+                        </div>
+                        <div class="form-group">
+                             <label for="reagentManufacturer">生产商</label>
+                            <input type="text" id="reagentManufacturer" list="manufacturerDatalist">
+                            <datalist id="manufacturerDatalist"></datalist>
+                        </div>
+                         <div class="form-group">
+                            <label for="reagentArticleNo">货号</label>
+                            <input type="text" id="reagentArticleNo" required>
+                         </div>
+                         <div class="form-group">
+                            <label for="reagentCategory">物料分类</label>
+                            <input type="text" id="reagentCategory" list="reagentCategoryDatalist" placeholder="例如: 核酸提取">
+                            <datalist id="reagentCategoryDatalist"></datalist>
+                        </div>
+                    </div>
+                    <div class="form-step-content" id="reagentStep2">
+                         <div class="form-group">
+                            <label for="reagentBatchNo">批号</label>
+                             <input type="text" id="reagentBatchNo" required>
+                        </div>
+                         <div class="form-group">
+                             <label for="reagentProdDate">生产日期</label>
+                            <input type="date" id="reagentProdDate" required>
+                        </div>
+                         <div class="form-group">
+                             <label for="reagentExpDate">有效期</label>
+                            <input type="date" id="reagentExpDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reagentQty">入库盒数</label>
+                            <input type="number" id="reagentQty" min="0" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reagentTestsPerUnit">每盒含人份数</label>
+                            <input type="number" id="reagentTestsPerUnit" min="1" value="96" required>
+                        </div>
+                         <div class="form-group">
+                            <label for="reagentLocation">保存位置</label>
+                             <input type="text" id="reagentLocation" placeholder="例如: 冰箱A-3层" required>
+                        </div>
+                         <div class="form-group">
+                            <label for="reagentTemp">保存温度</label>
+                             <select id="reagentTemp" required>
+                                <option value="常温">常温 (10-30℃)</option>
+                                <option value="4℃">冷藏 (2-8℃)</option>
+                                 <option value="-20℃">冷冻 (-15 ~ -25℃)</option>
+                                <option value="-80℃">超低温 (-70 ~ -90℃)</option>
+                            </select>
+                         </div>
+                    </div>
+                     <div class="form-step-content" id="reagentStep3">
+                        <div class="form-group">
+                             <label for="reagentOperator">入库人</label>
+                            <input type="text" id="reagentOperator" value="管理员" required>
+                        </div>
+                         <div class="form-group">
+                             <label for="reagentSupplier">供应商</label>
+                            <input type="text" id="reagentSupplier">
+                        </div>
+                         <div class="form-group">
+                            <label for="reagentNotes">备注</label>
+                            <textarea id="reagentNotes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                     <button type="button" class="btn btn-secondary" id="reagentPrevBtn" onclick="navigateReagentForm(-1)" style="display:none;">上一步</button>
+                    <button type="button" class="btn btn-primary" id="reagentNextBtn" onclick="navigateReagentForm(1)">下一步</button>
+                    <button type="submit" class="btn btn-success" id="reagentSubmitBtn" style="display:none;">确认入库</button>
+                </div>
+            </form>
+        </div>
+     </div>
+    
+    <!-- Equipment In Modal -->
+    <div id="equipmentInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">仪器设备入库</span>
+                <span class="close-btn" onclick="closeModal('equipmentInModal')">&times;</span>
+            </div>
+            <form id="equipmentInForm">
+                 <div class="modal-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="equipName">设备名称</label>
+                            <input type="text" id="equipName" required>
+                         </div>
+                         <div class="form-group">
+                            <label for="equipManufacturer">制造商</label>
+                            <input type="text" id="equipManufacturer">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipModel">规格型号</label>
+                            <input type="text" id="equipModel" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="equipSerialNo">出厂编号</label>
+                            <input type="text" id="equipSerialNo" placeholder="有唯一编号时填写">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipQty">数量</label>
+                            <input type="number" id="equipQty" value="1" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="equipLocation">存放位置</label>
+                            <input type="text" id="equipLocation" placeholder="例如: 201室-实验台3" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="equipStatus">状态</label>
+                            <select id="equipStatus" required>
+                                <option value="闲置">闲置</option>
+                                 <option value="使用中">使用中</option>
+                                <option value="校准中">校准中</option>
+                                <option value="维修">维修</option>
+                            </select>
+                         </div>
+                         <div class="form-group">
+                            <label for="equipPurchaseDate">购入日期</label>
+                            <input type="date" id="equipPurchaseDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipDeploymentDate">投放使用日期</label>
+                            <input type="date" id="equipDeploymentDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipWarrantyDate">维保截止</label>
+                            <input type="date" id="equipWarrantyDate">
+                        </div>
+                         <div class="form-group">
+                            <label for="equipPersonInCharge">负责人</label>
+                            <input type="text" id="equipPersonInCharge" value="公共" required>
+                         </div>
+                         <div class="form-group">
+                            <label for="equipOperator">登记人</label>
+                            <input type="text" id="equipOperator" value="管理员" required>
+                         </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('equipmentInModal')">取消</button>
+                    <button type="submit" class="btn btn-success">确认登记</button>
+                 </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Equipment Edit Modal -->
+    <div id="equipmentEditModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">编辑仪器设备信息</span>
+                <span class="close-btn" onclick="closeModal('equipmentEditModal')">&times;</span>
+            </div>
+            <form id="equipmentEditForm">
+                 <div class="modal-body">
+                    <input type="hidden" id="editEquipId">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label>设备名称</label>
+                            <input type="text" id="editEquipName" readonly>
+                         </div>
+                         <div class="form-group">
+                            <label for="editEquipManufacturer">制造商</label>
+                            <input type="text" id="editEquipManufacturer">
+                        </div>
+                        <div class="form-group">
+                            <label>规格型号</label>
+                            <input type="text" id="editEquipModel" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>出厂编号</label>
+                            <input type="text" id="editEquipSerialNo" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>数量</label>
+                            <input type="number" id="editEquipQty" value="1" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEquipLocation">存放位置</label>
+                            <input type="text" id="editEquipLocation" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEquipStatus">状态</label>
+                            <select id="editEquipStatus" required>
+                                <option value="闲置">闲置</option>
+                                 <option value="使用中">使用中</option>
+                                <option value="校准中">校准中</option>
+                                <option value="维修">维修</option>
+                            </select>
+                         </div>
+                         <div class="form-group">
+                            <label for="editEquipPurchaseDate">购入日期</label>
+                            <input type="date" id="editEquipPurchaseDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="editEquipDeploymentDate">投放使用日期</label>
+                            <input type="date" id="editEquipDeploymentDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="editEquipWarrantyDate">维保截止</label>
+                            <input type="date" id="editEquipWarrantyDate">
+                        </div>
+                         <div class="form-group">
+                            <label for="editEquipPersonInCharge">负责人</label>
+                            <input type="text" id="editEquipPersonInCharge" required>
+                         </div>
+                         <div class="form-group">
+                            <label for="editEquipOperator">操作人</label>
+                            <input type="text" id="editEquipOperator" value="管理员" required>
+                         </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('equipmentEditModal')">取消</button>
+                    <button type="submit" class="btn btn-success">保存更改</button>
+                 </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Maintenance Log Modal -->
+    <div id="maintenanceLogModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="maintenanceModalTitle">设备维护记录</span>
+                <span class="close-btn" onclick="closeModal('maintenanceLogModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <h4>历史记录</h4>
+                <div id="maintenanceLogHistory" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--border-color); padding: 10px; border-radius: 4px;">
+                    <p>暂无记录</p>
+                </div>
+                <h4>新增维护记录</h4>
+                <form id="maintenanceLogForm">
+                    <input type="hidden" id="maintenanceEquipId">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="maintenanceDate">维护日期</label>
+                            <input type="date" id="maintenanceDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="maintenanceType">维护类型</label>
+                            <select id="maintenanceType" required>
+                                <option value="日常保养">日常保养</option>
+                                <option value="校准">校准</option>
+                                <option value="维修">维修</option>
+                                <option value="验证">验证</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="maintenanceOperator">操作人</label>
+                            <input type="text" id="maintenanceOperator" value="管理员" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenanceNotes">维护内容及结果</label>
+                        <textarea id="maintenanceNotes" rows="3" required></textarea>
+                    </div>
+                    <div style="text-align: right;">
+                        <button type="submit" class="btn btn-primary">添加记录</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Reagent Out Modal -->
+    <div id="reagentOutModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="reagentOutTitle" class="modal-title">试剂出库</h3>
+                 <span class="close-btn" onclick="closeModal('reagentOutModal')">&times;</span>
+             </div>
+            <form id="reagentOutForm">
+                <div class="modal-body">
+                    <input type="hidden" id="outboundReagentId">
+                    <input type="hidden" id="outboundReagentName">
+                    <input type="hidden" id="outboundBatchNo">
+                    <div id="outboundBatchInfo" style="padding: 10px; border-radius: 4px; background-color: #f5f7fa; margin-bottom: 15px;"></div>
+                    <div class="form-group">
+                         <label for="outboundAmount">需要出库的总人份数</label>
+                        <input type="number" id="outboundAmount" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="outboundPurpose">出库用途 (实验项目/部门)</label>
+                        <input type="text" id="outboundPurpose" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="outboundUser">领用人</label>
+                         <input type="text" id="outboundUser" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                     <button type="button" class="btn btn-secondary" onclick="closeModal('reagentOutModal')">取消</button>
+                     <button type="submit" class="btn btn-danger">确认出库</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Error Message Modal -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <div class="modal-header">
+                <span class="modal-title" style="color: var(--danger-color); width: 100%; text-align: center;"><i class="fas fa-exclamation-triangle"></i> 发生错误</span>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessageText" style="font-size: 16px; line-height: 1.6;"></p>
+            </div>
+            <div class="modal-footer" style="justify-content: center; text-align: center;">
+                <button type="button" class="btn btn-primary" onclick="closeModal('errorModal')">好的</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- Configuration ---
+        // 重要！这里已经被修改为您的线上后端地址
+        const API_BASE_URL = 'https://lab-inventory-backend-yafg.onrender.com';
+
+        // --- Core Application Logic ---
+        const App = {
+            // 本地数据缓存，减少不必要的API请求
+            cache: {
+                reagents: [],
+                equipment: [],
+                records: [],
+            },
+            config: {
+                warningDays: 30,
+                urgentThreshold: 100 //人份
+            },
+
+            async init() {
+                // Attach form handlers
+                document.getElementById('reagentInForm').addEventListener('submit', this.handleReagentIn.bind(this));
+                document.getElementById('equipmentInForm').addEventListener('submit', this.handleEquipmentIn.bind(this));
+                document.getElementById('equipmentEditForm').addEventListener('submit', this.handleEquipmentEdit.bind(this));
+                document.getElementById('maintenanceLogForm').addEventListener('submit', this.handleMaintenanceLog.bind(this));
+                document.getElementById('reagentOutForm').addEventListener('submit', this.handleReagentOut.bind(this));
+                
+                // Initial load
+                await this.renderDashboard();
+            },
+            
+            // --- API Fetchers ---
+            async fetchDashboardData() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/dashboard`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    console.error("Failed to fetch dashboard data:", error);
+                    showError(`无法加载总控面板数据。\n\n错误: ${error.message}\n请确认后端服务正在 ${API_BASE_URL} 运行并且网络连接正常。`);
+                    return { recentRecords: [], expiringSoon: [] };
+                }
+            },
+
+            async fetchReagents() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/reagents`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    this.cache.reagents = await response.json();
+                    return this.cache.reagents;
+                } catch (error) {
+                    console.error("Failed to fetch reagents:", error);
+                    showError(`无法加载试剂数据。\n\n错误: ${error.message}\n请检查后端服务。`);
+                    return [];
+                }
+            },
+            
+            async fetchEquipment() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/equipment`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    this.cache.equipment = await response.json();
+                    return this.cache.equipment;
+                } catch (error) {
+                    console.error("Failed to fetch equipment:", error);
+                    showError(`无法加载设备数据。\n\n错误: ${error.message}\n请检查后端服务。`);
+                    return [];
+                }
+            },
+
+            async fetchRecords() {
+                 try {
+                    const response = await fetch(`${API_BASE_URL}/api/records`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    this.cache.records = await response.json();
+                    return this.cache.records;
+                } catch (error) {
+                    console.error("Failed to fetch records:", error);
+                    showError(`无法加载记录数据。\n\n错误: ${error.message}\n请检查后端服务。`);
+                    return [];
+                }
+            },
+
+            // --- Handlers ---
+            async handleReagentIn(e) {
+                e.preventDefault();
+                const form = e.target;
+                const payload = {
+                    name: form.reagentName.value,
+                    articleNo: form.reagentArticleNo.value,
+                    manufacturer: form.reagentManufacturer.value,
+                    category: form.reagentCategory.value || '未分类',
+                    qty: parseInt(form.reagentQty.value),
+                    operator: form.reagentOperator.value,
+                    notes: form.reagentNotes.value,
+                    batchDetails: {
+                        batchNo: form.reagentBatchNo.value,
+                        prodDate: form.reagentProdDate.value,
+                        expDate: form.reagentExpDate.value,
+                        testsPerUnit: parseInt(form.reagentTestsPerUnit.value),
+                        location: form.reagentLocation.value,
+                        temp: form.reagentTemp.value
+                    }
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/reagents/in`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(await response.json().then(e => e.error || '入库失败'));
+                    
+                    alert('入库成功！'); // Using alert for success is generally okay.
+                    closeModal('reagentInModal');
+                    this.refreshActivePage();
+                } catch (error) {
+                    console.error("Reagent In Error:", error);
+                    showError(`操作失败: ${error.message}`);
+                }
+            },
+            
+            async handleEquipmentIn(e) {
+                e.preventDefault();
+                const form = e.target;
+                const serialNo = form.equipSerialNo.value.trim();
+                const payload = {
+                    name: form.equipName.value,
+                    manufacturer: form.equipManufacturer.value,
+                    model: form.equipModel.value,
+                    serialNo: serialNo,
+                    quantity: serialNo ? 1 : parseInt(form.equipQty.value),
+                    location: form.equipLocation.value,
+                    status: form.equipStatus.value,
+                    purchaseDate: form.equipPurchaseDate.value,
+                    deploymentDate: form.equipDeploymentDate.value,
+                    warrantyDate: form.equipWarrantyDate.value,
+                    personInCharge: form.equipPersonInCharge.value,
+                    operator: form.equipOperator.value
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/equipment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(await response.json().then(e => e.error || '登记失败'));
+                    
+                    alert('设备登记成功！');
+                    closeModal('equipmentInModal');
+                    this.refreshActivePage();
+                } catch (error) {
+                    console.error("Equipment In Error:", error);
+                    showError(`操作失败: ${error.message}`);
+                }
+            },
+            
+            async handleEquipmentEdit(e) {
+                e.preventDefault();
+                const form = e.target;
+                const equipId = form.editEquipId.value;
+                const serialNo = form.editEquipSerialNo.value.trim();
+                const payload = {
+                    manufacturer: form.editEquipManufacturer.value,
+                    location: form.editEquipLocation.value,
+                    status: form.editEquipStatus.value,
+                    quantity: serialNo ? 1 : parseInt(form.editEquipQty.value),
+                    purchaseDate: form.editEquipPurchaseDate.value,
+                    deploymentDate: form.editEquipDeploymentDate.value,
+                    warrantyDate: form.editEquipWarrantyDate.value,
+                    personInCharge: form.editEquipPersonInCharge.value,
+                    operator: form.editEquipOperator.value
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/equipment/${equipId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(await response.json().then(e => e.error || '更新失败'));
+                    
+                    alert('设备信息更新成功！');
+                    closeModal('equipmentEditModal');
+                    this.refreshActivePage();
+                } catch (error) {
+                    console.error("Equipment Edit Error:", error);
+                    showError(`操作失败: ${error.message}`);
+                }
+            },
+
+            async handleMaintenanceLog(e) {
+                e.preventDefault();
+                const form = e.target;
+                const equipId = form.maintenanceEquipId.value;
+                const payload = {
+                    date: form.maintenanceDate.value,
+                    type: form.maintenanceType.value,
+                    notes: form.maintenanceNotes.value,
+                    operator: form.maintenanceOperator.value,
+                };
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/equipment/${equipId}/maintenance`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(await response.json().then(e => e.error || '添加记录失败'));
+                    
+                    form.reset();
+                    document.getElementById('maintenanceDate').value = new Date().toISOString().slice(0,10);
+                    // Refresh history
+                    const equipment = this.cache.equipment.find(eq => eq.id === equipId);
+                    if(equipment) {
+                        const newLog = await response.json();
+                        equipment.maintenance_logs.unshift(newLog);
+                        this.renderMaintenanceHistory(equipId);
+                    }
+                } catch (error) {
+                    console.error("Maintenance Log Error:", error);
+                    showError(`操作失败: ${error.message}`);
+                }
+            },
+
+            async handleReagentOut(e) {
+                e.preventDefault();
+                const form = e.target;
+                const payload = {
+                    reagentId: form.outboundReagentId.value,
+                    reagentName: form.outboundReagentName.value,
+                    batchNo: form.outboundBatchNo.value,
+                    amount: parseInt(form.outboundAmount.value),
+                    purpose: form.outboundPurpose.value,
+                    user: form.outboundUser.value
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/reagents/out`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error(await response.json().then(e => e.error || '出库失败'));
+                    
+                    alert('出库成功！');
+                    closeModal('reagentOutModal');
+                    this.refreshActivePage();
+                } catch (error) {
+                    console.error("Reagent Out Error:", error);
+                    showError(`操作失败: ${error.message}`);
+                }
+            },
+
+            // --- Renderers ---
+            async renderDashboard() {
+                const data = await this.fetchDashboardData();
+                
+                const expiringTable = document.getElementById('expiringSoonTable').querySelector('tbody');
+                expiringTable.innerHTML = data.expiringSoon.map(item => `
+                    <tr>
+                        <td>${item.reagentName}</td>
+                        <td>${item.batch.batchNo}</td>
+                         <td><span class="status-red">${item.daysLeft} 天</span></td>
+                    </tr>
+                `).join('') || `<tr><td colspan="3" style="text-align:center;">无临近过期试剂</td></tr>`;
+
+                const recentRecordsTable = document.getElementById('recentRecordsTable').querySelector('tbody');
+                recentRecordsTable.innerHTML = data.recentRecords.map(r => `
+                    <tr>
+                        <td>${new Date(r.time).toLocaleString()}</td>
+                        <td>${r.type}</td>
+                        <td>${r.name}</td>
+                         <td>${r.operator}</td>
+                        <td>${r.notes || (r.qty ? `${r.qty} ${r.item_type === '试剂' ? '人份' : '个'}` : '')}</td>
+                    </tr>
+                `).join('') || `<tr><td colspan="5" style="text-align:center;">暂无操作记录</td></tr>`;
+                
+                // Fetch full reagent list for chart
+                await this.fetchReagents();
+                this.renderStockChart();
+            },
+            
+            renderStockChart() {
+                const ctx = document.getElementById('reagentStockChart').getContext('2d');
+                if (window.myReagentChart) {
+                    window.myReagentChart.destroy();
+                }
+
+                if (this.cache.reagents.length === 0) {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    ctx.font = "16px Arial";
+                    ctx.fillStyle = "#888";
+                    ctx.textAlign = "center";
+                    ctx.fillText("暂无试剂库存数据", ctx.canvas.width / 2, ctx.canvas.height / 2);
+                    return;
+                }
+                
+                const reagentTotals = this.cache.reagents.map(r => ({
+                    name: r.name,
+                    total: r.reagent_batches.reduce((sum, b) => sum + b.total_tests, 0)
+                }));
+                
+                window.myReagentChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                         labels: reagentTotals.map(r => r.name),
+                        datasets: [{
+                            label: '试剂库存 (人份)',
+                            data: reagentTotals.map(r => r.total),
+                             backgroundColor: ['#4a90e2', '#50e3c2', '#f5a623', '#bd10e0', '#7ed321'],
+                            hoverOffset: 4
+                        }]
+                    },
+                     options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: { display: true, text: '试剂库存分布' }
+                         }
+                    }
+                });
+            },
+
+            async renderReagentInventory() {
+                await this.fetchReagents();
+                const tableBody = document.getElementById('reagentInventoryTable').querySelector('tbody');
+                tableBody.innerHTML = ''; 
+
+                if (this.cache.reagents.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">暂无试剂库存，请先入库。</td></tr>`;
+                    return;
+                }
+
+                const groupedReagents = this.cache.reagents.reduce((acc, reagent) => {
+                    const category = reagent.category || '未分类';
+                    if (!acc[category]) acc[category] = [];
+                    acc[category].push(reagent);
+                    return acc;
+                }, {});
+
+                const sortedCategories = Object.keys(groupedReagents).sort();
+
+                sortedCategories.forEach(category => {
+                    tableBody.innerHTML += `<tr class="category-header"><th colspan="4">${category}</th></tr>`;
+                    
+                    groupedReagents[category].forEach((reagent) => {
+                        const totalStock = reagent.reagent_batches.reduce((sum, b) => sum + b.total_tests, 0);
+                        const totalBoxes = reagent.reagent_batches.reduce((sum, b) => sum + Math.floor(b.total_tests / (b.tests_per_unit || 1)), 0);
+                        const daysToExpiry = reagent.reagent_batches.length > 0 ? reagent.reagent_batches.map(b => this.getDaysLeft(b.exp_date)) : [Infinity];
+                        const minDays = Math.min(...daysToExpiry);
+                        
+                        let status = 'green';
+                        if (totalStock <= this.config.urgentThreshold) status = 'red';
+                        else if (minDays <= this.config.warningDays) status = 'yellow';
+                        
+                        const sanitizedName = reagent.name.replace(/[^a-zA-Z0-9]/g, '');
+                        const row = `
+                            <tr class="reagent-row">
+                                <td><span class="reagent-name" onclick="App.toggleBatchDetails(event, '${reagent.id}')"><i class="fas fa-plus-square"></i> ${reagent.name}</span></td>
+                                <td>${totalBoxes}</td>
+                                <td>${totalStock}</td>
+                                <td><span class="status-indicator status-${status}"></span> ${status === 'green' ? '正常' : (status === 'yellow' ? '效期预警' : '库存紧急')}</td>
+                            </tr>
+                            <tr class="batch-details-row" id="batch-details-${reagent.id}">
+                                <td colspan="4">
+                                    <div id="batch-list-${reagent.id}"></div>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                });
+                
+                this.updateDatalists();
+            },
+
+            updateDatalists() {
+                const reagentDatalist = document.getElementById('reagentNameDatalist');
+                reagentDatalist.innerHTML = this.cache.reagents.map(r => `<option value="${r.name}">`).join('');
+                
+                const manufacturerDatalist = document.getElementById('manufacturerDatalist');
+                const manufacturers = [...new Set(this.cache.reagents.map(r => r.manufacturer).filter(m => m))];
+                manufacturerDatalist.innerHTML = manufacturers.map(m => `<option value="${m}">`).join('');
+                
+                const categoryDatalist = document.getElementById('reagentCategoryDatalist');
+                const categories = [...new Set(this.cache.reagents.map(r => r.category).filter(c => c))];
+                categoryDatalist.innerHTML = categories.map(c => `<option value="${c}">`).join('');
+            },
+
+            toggleBatchDetails(event, reagentId) {
+                event.stopPropagation();
+                const detailsRow = document.getElementById(`batch-details-${reagentId}`);
+                const icon = event.currentTarget.querySelector('i');
+                
+                if (detailsRow.style.display === 'table-row') {
+                    detailsRow.style.display = 'none';
+                    icon.className = 'fas fa-plus-square';
+                } else {
+                    this.renderBatchDetails(reagentId);
+                    detailsRow.style.display = 'table-row';
+                    icon.className = 'fas fa-minus-square';
+                }
+            },
+            
+            renderBatchDetails(reagentId) {
+                const container = document.getElementById(`batch-list-${reagentId}`);
+                const reagent = this.cache.reagents.find(r => r.id === reagentId);
+                if (!reagent) return;
+
+                if (reagent.reagent_batches.length === 0) {
+                    container.innerHTML = `<div class="batch-card"><span>该试剂当前没有库存批次。</span></div>`;
+                    return;
+                }
+
+                container.innerHTML = reagent.reagent_batches.sort((a,b) => new Date(a.exp_date) - new Date(b.exp_date)).map(b => {
+                    const daysLeft = this.getDaysLeft(b.exp_date);
+                    const expiryClass = daysLeft <= 0 ? 'expiry-date' : (daysLeft <= this.config.warningDays ? 'expiry-date' : '');
+                    const expiryText = daysLeft > 0 ? `剩${daysLeft}天` : (daysLeft === 0 ? '今天过期' : '已过期');
+                    const testsPerUnit = b.tests_per_unit || 1;
+                    const boxes = Math.floor(b.total_tests / testsPerUnit);
+                    const looseUnits = b.total_tests % testsPerUnit;
+
+                     return `
+                        <div class="batch-card">
+                            <div class="batch-info" style="flex-basis: 35%;">
+                                <span class="batch-number">批号: ${b.batch_no}</span>
+                                 <span>生产日期: ${b.prod_date}</span>
+                                <span class="${expiryClass}">有效期: ${b.exp_date} (${expiryText})</span>
+                             </div>
+                            <div class="batch-info" style="flex-basis: 35%;">
+                                <span>库存: ${b.total_tests}人份 (${boxes}盒, ${looseUnits}人份)</span>
+                                <span><i class="fas fa-map-marker-alt"></i> ${b.location}</span>
+                                 <span><i class="fas fa-thermometer-half"></i> ${b.temp}</span>
+                            </div>
+                            <div style="flex-basis: 20%; text-align: right;">
+                                <button class="btn btn-danger btn-sm" style="margin-bottom: 5px; width: 70px;" onclick="App.prepareBatchOut('${reagent.id}', '${reagent.name}', '${b.batch_no}')">出库</button>
+                                <button class="btn btn-primary btn-sm" style="width: 70px;" onclick="App.prepareBatchIn('${reagent.id}', '${b.batch_no}')">入库</button>
+                            </div>
+                       </div>
+                    `;
+                }).join('');
+            },
+
+            prepareNewReagentIn() {
+                const form = document.getElementById('reagentInForm');
+                form.reset();
+                document.getElementById('reagentInModalTitle').innerText = '试剂物料入库';
+                currentReagentStep = 1;
+                document.querySelectorAll('.form-step-content').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.form-steps .step').forEach(el => el.classList.remove('active'));
+                document.getElementById('reagentStep1').classList.add('active');
+                document.getElementById('reagentStep1Indicator').classList.add('active');
+                navigateReagentForm(0);
+                showModal('reagentInModal');
+            },
+
+            prepareBatchIn(reagentId, batchNo) {
+                this.prepareNewReagentIn(); 
+                const reagent = this.cache.reagents.find(r => r.id === reagentId);
+                const batch = reagent.reagent_batches.find(b => b.batch_no === batchNo);
+                document.getElementById('reagentInModalTitle').innerText = '为现有批次添加入库';
+                document.getElementById('reagentName').value = reagent.name;
+                document.getElementById('reagentManufacturer').value = reagent.manufacturer;
+                document.getElementById('reagentArticleNo').value = reagent.article_no;
+                document.getElementById('reagentCategory').value = reagent.category || '';
+                document.getElementById('reagentBatchNo').value = batch.batch_no;
+                document.getElementById('reagentProdDate').value = batch.prod_date;
+                document.getElementById('reagentExpDate').value = batch.exp_date;
+                document.getElementById('reagentLocation').value = batch.location;
+                document.getElementById('reagentTemp').value = batch.temp;
+                document.getElementById('reagentTestsPerUnit').value = batch.tests_per_unit;
+                showModal('reagentInModal');
+            },
+
+            prepareBatchOut(reagentId, reagentName, batchNo) {
+                const form = document.getElementById('reagentOutForm');
+                form.reset();
+                const reagent = this.cache.reagents.find(r => r.id === reagentId);
+                const batch = reagent.reagent_batches.find(b => b.batch_no === batchNo);
+                if (!reagent || !batch) return;
+
+                form.outboundReagentId.value = reagentId;
+                form.outboundReagentName.value = reagentName;
+                form.outboundBatchNo.value = batchNo;
+                document.getElementById('reagentOutTitle').innerText = `出库 - ${reagentName}`;
+                
+                const daysLeft = this.getDaysLeft(batch.exp_date);
+                const expiryText = daysLeft > 0 ? `剩${daysLeft}天` : (daysLeft === 0 ? '今天过期' : '已过期');
+                const infoDiv = document.getElementById('outboundBatchInfo');
+                infoDiv.innerHTML = `
+                    <p><strong>批号:</strong> ${batch.batch_no} (${expiryText})</p>
+                    <p><strong>当前库存:</strong> ${batch.total_tests} 人份</p>
+                `;
+                
+                const outboundAmountInput = document.getElementById('outboundAmount');
+                outboundAmountInput.max = batch.total_tests;
+                outboundAmountInput.placeholder = `最多可出库 ${batch.total_tests} 人份`;
+
+                showModal('reagentOutModal');
+            },
+
+            async renderEquipmentPage() {
+                await this.fetchEquipment();
+                const tableBody = document.getElementById('equipmentTable').querySelector('tbody');
+                if (this.cache.equipment.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px;">暂无设备信息，请先登记。</td></tr>`;
+                    return;
+                }
+                tableBody.innerHTML = this.cache.equipment.map(eq => `
+                    <tr class="equipment-row">
+                        <td>${eq.name}</td>
+                        <td>${eq.manufacturer || 'N/A'}</td>
+                        <td>${eq.model}</td>
+                        <td>${eq.serial_no || 'N/A'}</td>
+                        <td>${eq.quantity}</td>
+                        <td>${eq.location}</td>
+                        <td>${eq.status}</td>
+                        <td>${eq.person_in_charge}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="App.prepareEquipmentEdit('${eq.id}')">编辑</button>
+                            <button class="btn btn-secondary btn-sm" onclick="App.prepareMaintenanceLog('${eq.id}')">维护</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            prepareEquipmentEdit(equipId) {
+                const equipment = this.cache.equipment.find(eq => eq.id === equipId);
+                if (!equipment) return;
+                const form = document.getElementById('equipmentEditForm');
+                form.editEquipId.value = equipment.id;
+                form.editEquipName.value = equipment.name;
+                form.editEquipManufacturer.value = equipment.manufacturer || '';
+                form.editEquipModel.value = equipment.model;
+                form.editEquipSerialNo.value = equipment.serial_no;
+                form.editEquipQty.value = equipment.quantity;
+                form.editEquipQty.readOnly = !!equipment.serial_no;
+                form.editEquipLocation.value = equipment.location;
+                form.editEquipStatus.value = equipment.status;
+                form.editEquipPurchaseDate.value = equipment.purchase_date;
+                form.editEquipDeploymentDate.value = equipment.deployment_date || '';
+                form.editEquipWarrantyDate.value = equipment.warranty_date;
+                form.editEquipPersonInCharge.value = equipment.person_in_charge;
+                showModal('equipmentEditModal');
+            },
+
+            prepareMaintenanceLog(equipId) {
+                const equipment = this.cache.equipment.find(eq => eq.id === equipId);
+                if (!equipment) return;
+                document.getElementById('maintenanceEquipId').value = equipId;
+                document.getElementById('maintenanceModalTitle').innerText = `维护记录 - ${equipment.name} (${equipment.serial_no || equipment.model})`;
+                document.getElementById('maintenanceDate').value = new Date().toISOString().slice(0,10);
+                this.renderMaintenanceHistory(equipId);
+                showModal('maintenanceLogModal');
+            },
+
+            renderMaintenanceHistory(equipId) {
+                const equipment = this.cache.equipment.find(eq => eq.id === equipId);
+                const historyDiv = document.getElementById('maintenanceLogHistory');
+                const logs = equipment.maintenance_logs || [];
+                if (logs.length === 0) {
+                    historyDiv.innerHTML = '<p>暂无维护记录</p>';
+                    return;
+                }
+                historyDiv.innerHTML = logs.map(log => `
+                    <div class="maintenance-log-entry">
+                        <p><strong>日期:</strong> ${log.log_date} &nbsp;&nbsp; <strong>类型:</strong> ${log.log_type} &nbsp;&nbsp; <strong>操作人:</strong> ${log.operator}</p>
+                        <p><strong>内容:</strong> ${log.notes}</p>
+                    </div>
+                `).join('');
+            },
+
+            async renderRecordsPage() {
+                await this.fetchRecords();
+                const tableBody = document.getElementById('fullRecordsTable').querySelector('tbody');
+                // Note: Filtering is now best handled by the backend. This is a simplified frontend filter.
+                const filters = {
+                    startDate: document.getElementById('filterStartDate').value,
+                    endDate: document.getElementById('filterEndDate').value,
+                    type: document.getElementById('filterOperationType').value,
+                    name: document.getElementById('filterItemName').value.toLowerCase(),
+                    operator: document.getElementById('filterOperator').value.toLowerCase(),
+                    batchOrSerial: document.getElementById('filterBatchOrSerial').value.toLowerCase(),
+                };
+                
+                let filteredRecords = this.cache.records.filter(r => {
+                    const recordDate = new Date(r.time);
+                    if (filters.startDate && recordDate < new Date(filters.startDate)) return false;
+                    if (filters.endDate && recordDate > new Date(filters.endDate).setHours(23, 59, 59)) return false;
+                    if (filters.type && r.type !== filters.type) return false;
+                    if (filters.name && !String(r.name).toLowerCase().includes(filters.name)) return false;
+                    if (filters.operator && !String(r.operator).toLowerCase().includes(filters.operator)) return false;
+                    if (filters.batchOrSerial && !String(r.batch_or_serial).toLowerCase().includes(filters.batchOrSerial)) return false;
+                    return true;
+                });
+
+                tableBody.innerHTML = filteredRecords.map(r => `
+                    <tr>
+                        <td>${new Date(r.time).toLocaleString()}</td>
+                        <td>${r.type}</td>
+                        <td>${r.item_type}</td>
+                         <td>${r.name}</td>
+                        <td>${r.batch_or_serial || 'N/A'}</td>
+                        <td>${r.qty || 'N/A'}</td>
+                        <td>${r.operator}</td>
+                         <td>${r.notes || ''}</td>
+                    </tr>
+                `).join('');
+            },
+
+            printRecords() {
+                // This function still works as it prints the currently rendered table.
+                const table = document.getElementById('fullRecordsTable').cloneNode(true);
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html><head><title>库存操作记录报表</title>
+                    <style>body{font-family:sans-serif}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background-color:#f2f2f2}h1{text-align:center}.signature{margin-top:50px;text-align:right}</style>
+                    </head><body><h1>库存操作记录报表</h1><p>生成时间: ${new Date().toLocaleString()}</p>${table.outerHTML}
+                    <div class="signature"><p>审核人签字: __________________</p><p>日期: __________________</p></div>
+                    </body></html>`);
+                printWindow.document.close();
+                printWindow.print();
+            },
+
+            // --- Utilities ---
+            getDaysLeft(expDate) {
+                if (!expDate) return Infinity;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); 
+                const expiry = new Date(expDate);
+                expiry.setHours(0, 0, 0, 0);
+                const diffTime = expiry - today;
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            },
+            
+            async refreshActivePage() {
+                const activePageId = document.querySelector('.main-content .page.active')?.id;
+                if (!activePageId) {
+                    await this.renderDashboard();
+                    return;
+                }
+                
+                switch(activePageId) {
+                    case 'dashboard': await this.renderDashboard(); break;
+                    case 'reagents': await this.renderReagentInventory(); break;
+                    case 'equipment': await this.renderEquipmentPage(); break;
+                    case 'records': await this.renderRecordsPage(); break;
+                }
+            }
+        };
+
+        // --- Single Page Application Logic ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuItems = document.querySelectorAll('.sidebar-menu li');
+            const pages = document.querySelectorAll('.main-content .page');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    pages.forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    const pageId = this.getAttribute('data-page');
+                    document.getElementById(pageId).classList.add('active');
+                    App.refreshActivePage();
+                });
+            });
+            App.init();
+        });
+
+        // --- Modal Logic ---
+        function showModal(modalId) { document.getElementById(modalId).style.display = 'block'; }
+        function closeModal(modalId) {
+            const form = document.querySelector(`#${modalId} form`);
+            if (form) form.reset();
+            document.getElementById(modalId).style.display = 'none';
+        }
+        window.onclick = function(event) {
+            const modals = document.getElementsByClassName('modal');
+            for (let i = 0; i < modals.length; i++) {
+                if (event.target == modals[i]) {
+                    modals[i].style.display = "none";
+                }
+            }
+        }
+        
+        // Custom error display function
+        function showError(message) {
+            document.getElementById('errorMessageText').innerText = message;
+            showModal('errorModal');
+        }
+
+        // --- Reagent Form Navigation ---
+        let currentReagentStep = 1;
+        function navigateReagentForm(direction) {
+            const newStep = currentReagentStep + direction;
+            if (newStep < 1 || newStep > 3) return;
+
+            if (direction > 0) {
+                 if (currentReagentStep === 1) {
+                    if (!document.getElementById('reagentName').value || !document.getElementById('reagentArticleNo').value) {
+                        showError('请填写试剂名称和货号！');
+                        return false;
+                    }
+                }
+                if (currentReagentStep === 2) {
+                    if (!document.getElementById('reagentBatchNo').value || !document.getElementById('reagentExpDate').value) {
+                         showError('请填写批号和有效期！');
+                        return false;
+                    }
+                    if (new Date(document.getElementById('reagentExpDate').value) < new Date()) {
+                        if(!confirm('该批次已过期，确定要入库吗？')) return false;
+                    }
+                }
+            }
+
+            document.getElementById(`reagentStep${currentReagentStep}`).classList.remove('active');
+            document.getElementById(`reagentStep${currentReagentStep}Indicator`).classList.remove('active');
+            
+            currentReagentStep = newStep;
+            
+            document.getElementById(`reagentStep${currentReagentStep}`).classList.add('active');
+            document.getElementById(`reagentStep${currentReagentStep}Indicator`).classList.add('active');
+            
+            document.getElementById('reagentPrevBtn').style.display = currentReagentStep > 1 ? 'inline-block' : 'none';
+            document.getElementById('reagentNextBtn').style.display = currentReagentStep < 3 ? 'inline-block' : 'none';
+            document.getElementById('reagentSubmitBtn').style.display = currentReagentStep === 3 ? 'inline-block' : 'none';
+            return true;
+        }
+    </script>
+</body>
+</html>
+
