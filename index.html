@@ -428,7 +428,6 @@
                      <thead>
                         <tr>
                             <th>试剂名称</th>
-                            <th>货号</th>
                             <th>总盒数</th>
                             <th>总库存(人份)</th>
                             <th>预警状态</th>
@@ -530,16 +529,16 @@
                             <datalist id="manufacturerDatalist"></datalist>
                         </div>
                          <div class="form-group">
-                            <label for="reagentArticleNo">货号</label>
-                            <input type="text" id="reagentArticleNo" required>
-                         </div>
-                         <div class="form-group">
                             <label for="reagentCategory">物料分类</label>
                             <input type="text" id="reagentCategory" list="reagentCategoryDatalist" placeholder="例如: 核酸提取">
                             <datalist id="reagentCategoryDatalist"></datalist>
                         </div>
                     </div>
                     <div class="form-step-content" id="reagentStep2">
+                         <div class="form-group">
+                            <label for="reagentArticleNo">货号</label>
+                            <input type="text" id="reagentArticleNo" required>
+                         </div>
                          <div class="form-group">
                             <label for="reagentBatchNo">批号</label>
                              <input type="text" id="reagentBatchNo" required>
@@ -930,13 +929,13 @@
                 const form = e.target;
                 const payload = {
                     name: form.reagentName.value,
-                    articleNo: form.reagentArticleNo.value,
                     manufacturer: form.reagentManufacturer.value,
                     category: form.reagentCategory.value || '未分类',
                     qty: parseInt(form.reagentQty.value),
                     operator: form.reagentOperator.value,
                     notes: form.reagentNotes.value,
                     batchDetails: {
+                        articleNo: form.reagentArticleNo.value,
                         batchNo: form.reagentBatchNo.value,
                         prodDate: form.reagentProdDate.value,
                         expDate: form.reagentExpDate.value,
@@ -965,7 +964,6 @@
             
             async handleEquipmentIn(e) {
                 e.preventDefault();
-                const form = e.target;
                 const serialNo = form.equipSerialNo.value.trim();
                 const payload = {
                     name: form.equipName.value,
@@ -1173,7 +1171,7 @@
                 tableBody.innerHTML = ''; 
 
                 if (this.cache.reagents.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px;">暂无试剂库存，请先入库。</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">暂无试剂库存，请先入库。</td></tr>`;
                     return;
                 }
 
@@ -1187,7 +1185,7 @@
                 const sortedCategories = Object.keys(groupedReagents).sort();
 
                 sortedCategories.forEach(category => {
-                    tableBody.innerHTML += `<tr class="category-header"><th colspan="5">${category}</th></tr>`;
+                    tableBody.innerHTML += `<tr class="category-header"><th colspan="4">${category}</th></tr>`;
                     
                     groupedReagents[category].forEach((reagent) => {
                         const totalStock = reagent.reagent_batches.reduce((sum, b) => sum + b.total_tests, 0);
@@ -1202,13 +1200,12 @@
                         const row = `
                             <tr class="reagent-row">
                                 <td><span class="reagent-name" onclick="App.toggleBatchDetails(event, '${reagent.id}')"><i class="fas fa-plus-square"></i> ${reagent.name}</span></td>
-                                <td>${reagent.article_no || 'N/A'}</td>
                                 <td>${totalBoxes}</td>
                                 <td>${totalStock}</td>
                                 <td><span class="status-indicator status-${status}"></span> ${status === 'green' ? '正常' : (status === 'yellow' ? '效期预警' : '库存紧急')}</td>
                             </tr>
                             <tr class="batch-details-row" id="batch-details-${reagent.id}">
-                                <td colspan="5">
+                                <td colspan="4">
                                     <div id="batch-list-${reagent.id}"></div>
                                 </td>
                             </tr>
@@ -1270,7 +1267,7 @@
                         <div class="batch-card">
                             <div class="batch-info" style="flex-basis: 35%;">
                                 <span class="batch-number">批号: ${b.batch_no}</span>
-                                <span>货号: ${reagent.article_no || 'N/A'}</span>
+                                <span>货号: ${b.article_no || 'N/A'}</span>
                                 <span>生产日期: ${b.prod_date}</span>
                                 <span class="${expiryClass}">有效期: ${b.exp_date} (${expiryText})</span>
                              </div>
@@ -1281,7 +1278,7 @@
                             </div>
                             <div style="flex-basis: 20%; text-align: right;">
                                 <button class="btn btn-danger btn-sm" style="margin-bottom: 5px; width: 70px;" onclick="App.prepareBatchOut('${reagent.id}', '${reagent.name}', '${b.id}', '${b.batch_no}')">出库</button>
-                                <button class="btn btn-primary btn-sm" style="width: 70px;" onclick="App.prepareBatchIn('${reagent.id}', '${b.batch_no}')">入库</button>
+                                <button class="btn btn-primary btn-sm" style="width: 70px;" onclick="App.prepareBatchIn('${reagent.id}', '${b.id}')">入库</button>
                             </div>
                        </div>
                     `;
@@ -1301,15 +1298,15 @@
                 showModal('reagentInModal');
             },
 
-            prepareBatchIn(reagentId, batchNo) {
+            prepareBatchIn(reagentId, batchId) {
                 this.prepareNewReagentIn(); 
                 const reagent = this.cache.reagents.find(r => r.id === parseInt(reagentId));
-                const batch = reagent.reagent_batches.find(b => b.batch_no === batchNo);
+                const batch = reagent.reagent_batches.find(b => b.id === parseInt(batchId));
                 document.getElementById('reagentInModalTitle').innerText = '为现有批次添加入库';
                 document.getElementById('reagentName').value = reagent.name;
                 document.getElementById('reagentManufacturer').value = reagent.manufacturer;
-                document.getElementById('reagentArticleNo').value = reagent.article_no;
                 document.getElementById('reagentCategory').value = reagent.category || '';
+                document.getElementById('reagentArticleNo').value = batch.article_no;
                 document.getElementById('reagentBatchNo').value = batch.batch_no;
                 document.getElementById('reagentProdDate').value = batch.prod_date;
                 document.getElementById('reagentExpDate').value = batch.exp_date;
@@ -1550,14 +1547,14 @@
 
             if (direction > 0) {
                  if (currentReagentStep === 1) {
-                    if (!document.getElementById('reagentName').value || !document.getElementById('reagentArticleNo').value) {
-                        showError('请填写试剂名称和货号！');
+                    if (!document.getElementById('reagentName').value) {
+                        showError('请填写试剂名称！');
                         return false;
                     }
                 }
                 if (currentReagentStep === 2) {
-                    if (!document.getElementById('reagentBatchNo').value || !document.getElementById('reagentExpDate').value) {
-                         showError('请填写批号和有效期！');
+                    if (!document.getElementById('reagentArticleNo').value || !document.getElementById('reagentBatchNo').value || !document.getElementById('reagentExpDate').value) {
+                         showError('请填写货号、批号和有效期！');
                         return false;
                     }
                     if (new Date(document.getElementById('reagentExpDate').value) < new Date()) {
