@@ -964,6 +964,7 @@
             
             async handleEquipmentIn(e) {
                 e.preventDefault();
+                const form = e.target;
                 const serialNo = form.equipSerialNo.value.trim();
                 const payload = {
                     name: form.equipName.value,
